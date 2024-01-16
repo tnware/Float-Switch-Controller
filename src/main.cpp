@@ -1,24 +1,23 @@
+// Standard Library Includes
 #include <Arduino.h>
-#include <Wire.h>
+
+// External Libraries
 #include <U8g2lib.h>
-#include <WiFi.h>
-#include <WebServer.h>
-#include "credentials.h"
 #include <ESPAsyncWebServer.h>
-#include "index.h" // Include the HTML content
-#include <ArduinoJson.h>
-#include "display.h"
-#include "globals.h"
-#include "web_server.h"
-#include "logic.h"
-#include "network.h"
-#include "switch_control.h"
-#include "setup.h"
+
+// Project-Specific Headers
+#include "credentials.h"
+#include "index.h"          // HTML content
+#include "display.h"        // Display-related functions
+#include "globals.h"        // Global variables and constants
+#include "logic.h"          // Business logic
+#include "network.h"        // Network-related functions
+#include "switch_control.h" // Switch control functions
+#include "web_server.h"     // Web server setup and handlers
+#include "setup.h"          // Setup-related functions
 
 AsyncWebServer server(80);
-// WebServer server(80); // HTTP server on port 80
 // Initialize the U8G2 library for SSD1306 OLED display
-// U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 
 // Array of GPIO pins used for the float switches

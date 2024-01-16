@@ -33,18 +33,65 @@ void setup()
     digitalWrite(ledPin, currentRelayState);   // Set initial LED state
 }
 
-void drawCheckmark()
+void drawStatusScreen(bool allClosed, int openSwitchCount)
 {
-    // Draw a simple checkmark
-    u8g2.drawLine(10, 30, 20, 40); // First part of the checkmark
-    u8g2.drawLine(20, 40, 40, 20); // Second part of the checkmark
-}
+    // Clear the buffer
+    u8g2.clearBuffer();
 
-void drawCross()
-{
-    // Draw a simple cross
-    u8g2.drawLine(10, 20, 40, 50); // First diagonal
-    u8g2.drawLine(40, 20, 10, 50); // Second diagonal
+    // Draw the top status bar
+    for (int i = 0; i < numSwitches; ++i)
+    {
+        if (lastSwitchStates[i])
+        {
+            // Draw a filled rectangle for closed switch
+            u8g2.drawBox(i * 25 + 1, 0, 24, 8);
+        }
+        else
+        {
+            // Draw an unfilled rectangle for open switch
+            u8g2.drawFrame(i * 25 + 1, 0, 24, 8);
+        }
+    }
+
+    // Set the base line y-coordinate for the status text
+    int baseY = 24;
+
+    // Choose a suitable font for status message
+    u8g2.setFont(u8g2_font_ncenB08_tr); // Choose a suitable font
+
+    // Display the system status as text
+    if (allClosed)
+    {
+        u8g2.drawStr(0, baseY, "OKAY");
+    }
+    else
+    {
+        char alertMsg[30];
+        sprintf(alertMsg, "ALERT: %d OPEN", openSwitchCount);
+        u8g2.drawStr(0, baseY, alertMsg);
+    }
+
+    // Choose a suitable font for the icons
+    u8g2.setFont(u8g2_font_unifont_t_77);
+
+    // Position for the icon in the bottom right corner
+    int iconX = u8g2.getDisplayWidth() - 18; // 18 pixels from the right edge
+    int iconY = u8g2.getDisplayHeight() - 2; // 2 pixels from the bottom edge
+
+    // Draw the appropriate icon
+    if (allClosed)
+    {
+        // Draw water droplet icon
+        u8g2.drawGlyph(iconX, iconY, 0x26c6);
+    }
+    else
+    {
+        // Draw alert icon
+        u8g2.drawGlyph(iconX, iconY, 0x26a0);
+    }
+
+    // Send buffer to the display
+    u8g2.sendBuffer();
 }
 
 void loop()
@@ -75,67 +122,29 @@ void loop()
     // Update the OLED only if a change in state has occurred
     if (stateChanged)
     {
-        u8g2.clearBuffer(); // Clear the buffer
-
-        // Draw the top status bar
-        for (int i = 0; i < numSwitches; ++i)
-        {
-            if (lastSwitchStates[i])
-            {
-                // Draw a filled rectangle for closed switch
-                u8g2.drawBox(i * 25 + 1, 0, 24, 8);
-            }
-            else
-            {
-                // Draw an unfilled rectangle for open switch
-                u8g2.drawFrame(i * 25 + 1, 0, 24, 8);
-            }
-        }
-
-        // Determine and draw the system status
-        if (openSwitches == 0)
-        {
-            drawCheckmark();
-            u8g2.setFont(u8g2_font_ncenB08_tr); // Choose a suitable font
-            u8g2.drawStr(50, 30, "OKAY");       // Place text next to the checkmark
-            Serial.println("System Status: OKAY");
-        }
-        else
-        {
-            Serial.print("ALERT: ");
-            Serial.print(openSwitches);
-            Serial.println(" switch(es) OPEN.");
-            drawCross();
-            int yPosition = 40;
-            for (int i = 0; i < numSwitches; ++i)
-            {
-                if (!lastSwitchStates[i])
-                {
-                    u8g2.setFont(u8g2_font_ncenB08_tr); // Choose a suitable font
-                    u8g2.setCursor(50, yPosition);      // Set cursor position next to the cross
-                    u8g2.print("#");
-                    u8g2.print(i + 1);
-                    u8g2.print(": OPEN");
-                    yPosition += 15;
-                }
-            }
-        }
-
-        u8g2.sendBuffer(); // Transfer buffer to the display
+        drawStatusScreen(openSwitches == 0, openSwitches);
     }
 
     // Control the relay and LED based on the float switches status
     if (relayShouldBeActive && currentRelayState == LOW)
     {
-        digitalWrite(relayPin, HIGH);
-        digitalWrite(ledPin, HIGH); // Turn on the LED
-        currentRelayState = HIGH;
+        if (currentRelayState != HIGH)
+        { // Check if the relay state needs to change
+            digitalWrite(relayPin, HIGH);
+            digitalWrite(ledPin, HIGH); // Turn on the LED
+            currentRelayState = HIGH;
+            Serial.println("Relay and LED activated.");
+        }
     }
     else if (!relayShouldBeActive && currentRelayState == HIGH)
     {
-        digitalWrite(relayPin, LOW);
-        digitalWrite(ledPin, LOW); // Turn off the LED
-        currentRelayState = LOW;
+        if (currentRelayState != LOW)
+        { // Check if the relay state needs to change
+            digitalWrite(relayPin, LOW);
+            digitalWrite(ledPin, LOW); // Turn off the LED
+            currentRelayState = LOW;
+            Serial.println("Relay and LED deactivated.");
+        }
     }
 
     delay(1000); // Wait for a second before reading again

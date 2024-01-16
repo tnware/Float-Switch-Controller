@@ -56,14 +56,22 @@ void handleRoot()
     html += "text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}";
     html += ".button2 {background-color: #555555;}</style></head>";
     html += "<body><h1>Float Switch Status</h1>";
+
+    // Check the current state of the relay directly
+    bool isRelayActive = digitalRead(relayPin) == HIGH; // Assuming HIGH means active
+    String globalStatus = isRelayActive ? "OKAY" : "ALERT";
+    String relayStatus = isRelayActive ? "ON" : "OFF";
+
+    html += "<p>Global Status: " + globalStatus + "</p>";
+    html += "<p>Relay Status: " + relayStatus + "</p>";
+
     html += "<form action='/override' method='get'><button>Toggle Override Mode</button></form><br>";
     html += overrideMode ? "<b>Override Mode is ON</b><br>" : "<b>Override Mode is OFF</b><br>";
+
     for (int i = 0; i < numSwitches; ++i)
     {
         html += "Switch " + String(i + 1) + ": " + (lastSwitchStates[i] ? "CLOSED" : "OPEN");
-        // Check if the switch is CLOSED to determine button class
         String buttonClass = lastSwitchStates[i] ? "button" : "button button2";
-        html += (lastSwitchStates[i] ? "CLOSED" : "OPEN");
         html += " <form action='/toggle' method='get'><button type='submit' name='switch' value='" + String(i) + "' class='" + buttonClass + "'>Toggle</button></form><br>";
     }
     html += "</body></html>";

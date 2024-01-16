@@ -4,10 +4,11 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include "credentials.h"
-
-// Replace with your network credentials
-
-WebServer server(80); // HTTP server on port 80
+#include <ESPAsyncWebServer.h>
+#include "index.h" // Include the HTML content
+#include <ArduinoJson.h>
+AsyncWebServer server(80);
+// WebServer server(80); // HTTP server on port 80
 // Initialize the U8G2 library for SSD1306 OLED display
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
 
@@ -22,60 +23,67 @@ bool currentRelayState = LOW; // Current state of the relay
 
 bool overrideMode = false; // Global variable to track the override mode
 
-void handleSwitchToggle()
+String getSwitchDataJSON()
 {
-    if (server.hasArg("switch"))
+    DynamicJsonDocument doc(1024);
+    for (int i = 0; i < numSwitches; ++i)
     {
-        int switchNum = server.arg("switch").toInt();
+        doc[String(i)] = lastSwitchStates[i] ? "CLOSED" : "OPEN";
+    }
+    String output;
+    serializeJson(doc, output);
+    return output;
+}
+
+String getRelayStatusJSON()
+{
+    DynamicJsonDocument doc(256);
+    bool isRelayActive = digitalRead(relayPin) == HIGH; // Assuming HIGH means active
+    doc["relayStatus"] = isRelayActive ? "ON" : "OFF";
+    String output;
+    serializeJson(doc, output);
+    return output;
+}
+
+String getGlobalStatusJSON()
+{
+    DynamicJsonDocument doc(256);
+    bool allClosed = true;
+    for (int i = 0; i < numSwitches; ++i)
+    {
+        if (!lastSwitchStates[i])
+        {
+            allClosed = false;
+            break;
+        }
+    }
+    doc["globalStatus"] = allClosed ? "OKAY" : "ALERT";
+    String output;
+    serializeJson(doc, output);
+    return output;
+}
+
+void handleSwitchToggle(AsyncWebServerRequest *request)
+{
+    if (request->hasArg("switch"))
+    {
+        int switchNum = request->arg("switch").toInt();
         if (switchNum >= 0 && switchNum < numSwitches)
         {
-            // Toggle the state of the switch
             lastSwitchStates[switchNum] = !lastSwitchStates[switchNum];
             Serial.print("Toggled Switch ");
             Serial.print(switchNum + 1);
             Serial.println(lastSwitchStates[switchNum] ? ": CLOSED" : ": OPEN");
         }
     }
-    server.sendHeader("Location", "/");
-    server.send(303); // Redirect back to the root page
+    request->redirect("/");
 }
 
-void handleOverrideToggle()
+void handleOverrideToggle(AsyncWebServerRequest *request)
 {
-    overrideMode = !overrideMode; // Toggle the override mode
+    overrideMode = !overrideMode;
     Serial.println(overrideMode ? "Override mode activated." : "Override mode deactivated.");
-    server.sendHeader("Location", "/");
-    server.send(303); // Redirect back to the root page
-}
-
-void handleRoot()
-{
-    String html = "<html><head><title>Float Switch Status</title>";
-    html += "<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}";
-    html += ".button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;";
-    html += "text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}";
-    html += ".button2 {background-color: #555555;}</style></head>";
-    html += "<body><h1>Float Switch Status</h1>";
-
-    // Check the current state of the relay directly
-    bool isRelayActive = digitalRead(relayPin) == HIGH; // Assuming HIGH means active
-    String globalStatus = isRelayActive ? "OKAY" : "ALERT";
-    String relayStatus = isRelayActive ? "ON" : "OFF";
-
-    html += "<p>Global Status: " + globalStatus + "</p>";
-    html += "<p>Relay Status: " + relayStatus + "</p>";
-
-    html += "<form action='/override' method='get'><button>Toggle Override Mode</button></form><br>";
-    html += overrideMode ? "<b>Override Mode is ON</b><br>" : "<b>Override Mode is OFF</b><br>";
-
-    for (int i = 0; i < numSwitches; ++i)
-    {
-        html += "Switch " + String(i + 1) + ": " + (lastSwitchStates[i] ? "CLOSED" : "OPEN");
-        String buttonClass = lastSwitchStates[i] ? "button" : "button button2";
-        html += " <form action='/toggle' method='get'><button type='submit' name='switch' value='" + String(i) + "' class='" + buttonClass + "'>Toggle</button></form><br>";
-    }
-    html += "</body></html>";
-    server.send(200, "text/html", html);
+    request->redirect("/");
 }
 
 void setup()
@@ -106,10 +114,27 @@ void setup()
     Serial.println("");
     Serial.println("WiFi connected.");
 
-    // Start the server
-    server.on("/", handleRoot);
-    server.on("/toggle", handleSwitchToggle);
-    server.on("/override", handleOverrideToggle);
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+              { request->send(200, "text/html", webpage); });
+    server.on("/toggle", HTTP_GET, [](AsyncWebServerRequest *request)
+              { handleSwitchToggle(request); });
+
+    server.on("/override", HTTP_GET, [](AsyncWebServerRequest *request)
+              { handleOverrideToggle(request); });
+    server.on("/getSwitchData", HTTP_GET, [](AsyncWebServerRequest *request)
+              {
+    String response = getSwitchDataJSON(); // Function to generate JSON response
+    request->send(200, "application/json", response); });
+    server.on("/getRelayStatus", HTTP_GET, [](AsyncWebServerRequest *request)
+              {
+    String response = getRelayStatusJSON();
+    request->send(200, "application/json", response); });
+
+    server.on("/getGlobalStatus", HTTP_GET, [](AsyncWebServerRequest *request)
+              {
+    String response = getGlobalStatusJSON();
+    request->send(200, "application/json", response); });
+
     server.begin();
     Serial.println("HTTP server started.");
     Serial.println(WiFi.localIP());
@@ -235,6 +260,6 @@ void loop()
         Serial.println("Relay and LED deactivated.");
     }
 
-    delay(50);             // Wait for a second before reading again
-    server.handleClient(); // Handle client requests
+    delay(50); // Wait for a second before reading again
+    // server.handleClient(); // Handle client requests
 }

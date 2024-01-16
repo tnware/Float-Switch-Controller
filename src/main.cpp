@@ -58,8 +58,9 @@ void loop()
     {
         bool isClosed = digitalRead(floatSwitchPins[i]) == LOW;
 
+        // Check if state has changed
         if (isClosed != lastSwitchStates[i])
-        {                                   // Check if state has changed
+        {
             stateChanged = true;            // Mark that a change has occurred
             lastSwitchStates[i] = isClosed; // Update the last state
         }
@@ -72,11 +73,26 @@ void loop()
     }
 
     // Update the OLED only if a change in state has occurred
-
     if (stateChanged)
     {
         u8g2.clearBuffer(); // Clear the buffer
 
+        // Draw the top status bar
+        for (int i = 0; i < numSwitches; ++i)
+        {
+            if (lastSwitchStates[i])
+            {
+                // Draw a filled rectangle for closed switch
+                u8g2.drawBox(i * 25 + 1, 0, 24, 8);
+            }
+            else
+            {
+                // Draw an unfilled rectangle for open switch
+                u8g2.drawFrame(i * 25 + 1, 0, 24, 8);
+            }
+        }
+
+        // Determine and draw the system status
         if (openSwitches == 0)
         {
             drawCheckmark();
@@ -86,7 +102,6 @@ void loop()
         }
         else
         {
-            // Log system status to the console
             Serial.print("ALERT: ");
             Serial.print(openSwitches);
             Serial.println(" switch(es) OPEN.");

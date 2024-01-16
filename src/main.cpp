@@ -1,7 +1,13 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <U8g2lib.h>
+#include <WiFi.h>
+#include <WebServer.h>
+#include "credentials.h"
 
+// Replace with your network credentials
+
+WebServer server(80); // HTTP server on port 80
 // Initialize the U8G2 library for SSD1306 OLED display
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
 
@@ -13,6 +19,48 @@ bool lastSwitchStates[numSwitches]; // Array to store the last state of each swi
 const int relayPin = 23;      // GPIO pin used for the relay
 const int ledPin = 2;         // GPIO pin used for the LED
 bool currentRelayState = LOW; // Current state of the relay
+
+bool overrideMode = false; // Global variable to track the override mode
+
+void handleSwitchToggle()
+{
+    if (server.hasArg("switch"))
+    {
+        int switchNum = server.arg("switch").toInt();
+        if (switchNum >= 0 && switchNum < numSwitches)
+        {
+            // Toggle the state of the switch
+            lastSwitchStates[switchNum] = !lastSwitchStates[switchNum];
+            Serial.print("Toggled Switch ");
+            Serial.print(switchNum + 1);
+            Serial.println(lastSwitchStates[switchNum] ? ": CLOSED" : ": OPEN");
+        }
+    }
+    server.sendHeader("Location", "/");
+    server.send(303); // Redirect back to the root page
+}
+
+void handleOverrideToggle()
+{
+    overrideMode = !overrideMode; // Toggle the override mode
+    Serial.println(overrideMode ? "Override mode activated." : "Override mode deactivated.");
+    server.sendHeader("Location", "/");
+    server.send(303); // Redirect back to the root page
+}
+
+void handleRoot()
+{
+    String html = "<html><head><title>Float Switch Status</title></head><body><h1>Float Switch Status</h1>";
+    html += "<form action='/override' method='get'><button>Toggle Override Mode</button></form><br>";
+    html += overrideMode ? "<b>Override Mode is ON</b><br>" : "<b>Override Mode is OFF</b><br>";
+    for (int i = 0; i < numSwitches; ++i)
+    {
+        html += "Switch " + String(i + 1) + ": " + (lastSwitchStates[i] ? "CLOSED" : "OPEN");
+        html += " <form action='/toggle' method='get'><button name='switch' value='" + String(i) + "'>Toggle</button></form><br>";
+    }
+    html += "</body></html>";
+    server.send(200, "text/html", html);
+}
 
 void setup()
 {
@@ -31,6 +79,24 @@ void setup()
     pinMode(ledPin, OUTPUT);
     digitalWrite(relayPin, currentRelayState); // Set initial relay state
     digitalWrite(ledPin, currentRelayState);   // Set initial LED state
+
+    // Connect to WiFi
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        delay(500);
+        Serial.print(".");
+    }
+    Serial.println("");
+    Serial.println("WiFi connected.");
+
+    // Start the server
+    server.on("/", handleRoot);
+    server.on("/toggle", handleSwitchToggle);
+    server.on("/override", handleOverrideToggle);
+    server.begin();
+    Serial.println("HTTP server started.");
+    Serial.println(WiFi.localIP());
 }
 
 void drawStatusScreen(bool allClosed, int openSwitchCount)
@@ -100,52 +166,59 @@ void loop()
     int openSwitches = 0;
     bool stateChanged = false;
 
-    // Read and check the state of each float switch
-    for (int i = 0; i < numSwitches; ++i)
+    if (!overrideMode)
     {
-        bool isClosed = digitalRead(floatSwitchPins[i]) == LOW;
-
-        // Check if state has changed
-        if (isClosed != lastSwitchStates[i])
+        // Read and check the state of each float switch
+        for (int i = 0; i < numSwitches; ++i)
         {
-            stateChanged = true;            // Mark that a change has occurred
-            lastSwitchStates[i] = isClosed; // Update the last state
+            bool isClosed = digitalRead(floatSwitchPins[i]) == LOW;
+            if (isClosed != lastSwitchStates[i])
+            {
+                stateChanged = true;            // Mark that a change has occurred
+                lastSwitchStates[i] = isClosed; // Update the last state
+            }
+            if (!isClosed)
+            {
+                relayShouldBeActive = false;
+                openSwitches++;
+            }
         }
-
-        if (!isClosed)
+    }
+    else
+    {
+        // In override mode, count the number of open switches based on lastSwitchStates array
+        for (int i = 0; i < numSwitches; ++i)
         {
-            relayShouldBeActive = false;
-            openSwitches++;
+            if (!lastSwitchStates[i])
+            {
+                relayShouldBeActive = false;
+                openSwitches++;
+            }
         }
     }
 
-    // Update the OLED only if a change in state has occurred
-    if (stateChanged)
+    // Update the OLED display if there is a change in state or if in override mode
+    if (stateChanged || overrideMode)
     {
-        drawStatusScreen(openSwitches == 0, openSwitches);
+        drawStatusScreen(relayShouldBeActive, openSwitches);
     }
 
     // Control the relay and LED based on the float switches status
-    if (relayShouldBeActive && currentRelayState == LOW)
+    if (relayShouldBeActive && currentRelayState != HIGH)
     {
-        if (currentRelayState != HIGH)
-        { // Check if the relay state needs to change
-            digitalWrite(relayPin, HIGH);
-            digitalWrite(ledPin, HIGH); // Turn on the LED
-            currentRelayState = HIGH;
-            Serial.println("Relay and LED activated.");
-        }
+        digitalWrite(relayPin, HIGH);
+        digitalWrite(ledPin, HIGH); // Turn on the LED
+        currentRelayState = HIGH;
+        Serial.println("Relay and LED activated.");
     }
-    else if (!relayShouldBeActive && currentRelayState == HIGH)
+    else if (!relayShouldBeActive && currentRelayState != LOW)
     {
-        if (currentRelayState != LOW)
-        { // Check if the relay state needs to change
-            digitalWrite(relayPin, LOW);
-            digitalWrite(ledPin, LOW); // Turn off the LED
-            currentRelayState = LOW;
-            Serial.println("Relay and LED deactivated.");
-        }
+        digitalWrite(relayPin, LOW);
+        digitalWrite(ledPin, LOW); // Turn off the LED
+        currentRelayState = LOW;
+        Serial.println("Relay and LED deactivated.");
     }
 
-    delay(1000); // Wait for a second before reading again
+    delay(50);             // Wait for a second before reading again
+    server.handleClient(); // Handle client requests
 }

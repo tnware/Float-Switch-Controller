@@ -12,6 +12,8 @@
 #include "web_server.h"
 #include "logic.h"
 #include "network.h"
+#include "switch_control.h"
+#include "setup.h"
 
 AsyncWebServer server(80);
 // WebServer server(80); // HTTP server on port 80
@@ -35,20 +37,9 @@ void setup()
     Serial.begin(9600); // Start serial communication at 9600 baud
     u8g2.begin();       // Initialize the OLED display
 
-    // Initialize the float switch pins as inputs with pull-up resistors
-    for (int i = 0; i < numSwitches; ++i)
-    {
-        pinMode(floatSwitchPins[i], INPUT_PULLUP);
-        lastSwitchStates[i] = digitalRead(floatSwitchPins[i]); // Initialize the last state
-    }
-
-    // Initialize the relay and LED pins as outputs
-    pinMode(relayPin, OUTPUT);
-    pinMode(ledPin, OUTPUT);
-    digitalWrite(relayPin, currentRelayState); // Set initial relay state
-    digitalWrite(ledPin, currentRelayState);   // Set initial LED state
-    setupWiFi();                               // Initialize WiFi connection
-    setupWebServer();                          // Initialize web server setup
+    initializePins();
+    setupWiFi();      // Initialize WiFi connection
+    setupWebServer(); // Initialize web server setup
     server.begin();
     Serial.println("HTTP server started.");
     Serial.println(WiFi.localIP());
@@ -60,36 +51,7 @@ void loop()
     int openSwitches = 0;
     bool stateChanged = false;
 
-    if (!overrideMode)
-    {
-        // Read and check the state of each float switch
-        for (int i = 0; i < numSwitches; ++i)
-        {
-            bool isClosed = digitalRead(floatSwitchPins[i]) == LOW;
-            if (isClosed != lastSwitchStates[i])
-            {
-                stateChanged = true;            // Mark that a change has occurred
-                lastSwitchStates[i] = isClosed; // Update the last state
-            }
-            if (!isClosed)
-            {
-                relayShouldBeActive = false;
-                openSwitches++;
-            }
-        }
-    }
-    else
-    {
-        // In override mode, count the number of open switches based on lastSwitchStates array
-        for (int i = 0; i < numSwitches; ++i)
-        {
-            if (!lastSwitchStates[i])
-            {
-                relayShouldBeActive = false;
-                openSwitches++;
-            }
-        }
-    }
+    updateSwitchStates(relayShouldBeActive, openSwitches, stateChanged);
 
     // Update the OLED display if there is a change in state or if in override mode
     if (stateChanged || overrideMode)

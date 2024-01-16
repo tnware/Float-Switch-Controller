@@ -54,6 +54,16 @@ String getGlobalStatusJSON()
     return output;
 }
 
+// Serializes the override status into a JSON string
+String getOverrideStatusJSON()
+{
+    DynamicJsonDocument doc(256);
+    doc["overrideStatus"] = overrideMode; // Assuming overrideMode is a boolean
+    String output;
+    serializeJson(doc, output);
+    return output;
+}
+
 // Handles toggle requests for individual switches
 void handleSwitchToggle(AsyncWebServerRequest *request)
 {
@@ -106,5 +116,10 @@ void setupWebServer()
               {
     String response = getGlobalStatusJSON();
     request->send(200, "application/json", response); });
+    // Route for serving the override status
+    server.on("/getOverrideStatus", HTTP_GET, [](AsyncWebServerRequest *request)
+              {
+        String response = getOverrideStatusJSON();
+        request->send(200, "application/json", response); });
     // More routes...
 }

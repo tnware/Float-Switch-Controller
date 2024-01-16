@@ -1,3 +1,9 @@
+/**
+ * Main Program File
+ * Description: This file contains the main setup and loop functions for Float Switch Controller.
+ * Author: Tyler Woods
+ * Date: 1/16/2024
+ */
 // Standard Library Includes
 #include <Arduino.h>
 
@@ -33,19 +39,21 @@ bool overrideMode = false; // Global variable to track the override mode
 
 void setup()
 {
-    Serial.begin(9600); // Start serial communication at 9600 baud
+    Serial.begin(9600); // Initialize serial communication
     u8g2.begin();       // Initialize the OLED display
 
-    initializePins();
-    setupWiFi();      // Initialize WiFi connection
-    setupWebServer(); // Initialize web server setup
-    server.begin();
+    initializePins(); // Set up GPIO pins
+    setupWiFi();      // Connect to WiFi
+    setupWebServer(); // Initialize web server
+    server.begin();   // Start the server
+
     Serial.println("HTTP server started.");
     Serial.println(WiFi.localIP());
 }
 
 void loop()
 {
+    // State variables for switch control
     bool relayShouldBeActive = true;
     int openSwitches = 0;
     bool stateChanged = false;
@@ -58,7 +66,7 @@ void loop()
         drawStatusScreen(relayShouldBeActive, openSwitches);
     }
 
-    // Control the relay and LED based on the float switches status
+    // Control relay and LED based on switch states
     if (relayShouldBeActive && currentRelayState != HIGH)
     {
         activateRelayAndLED();
@@ -68,5 +76,5 @@ void loop()
         deactivateRelayAndLED();
     }
 
-    delay(50); // Wait for a second before reading again
+    delay(50); // Short delay for debounce and rate control
 }

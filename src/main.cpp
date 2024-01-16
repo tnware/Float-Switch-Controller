@@ -10,6 +10,8 @@
 #include "display.h"
 #include "globals.h"
 #include "web_server.h"
+#include "logic.h"
+#include "network.h"
 
 AsyncWebServer server(80);
 // WebServer server(80); // HTTP server on port 80
@@ -45,17 +47,8 @@ void setup()
     pinMode(ledPin, OUTPUT);
     digitalWrite(relayPin, currentRelayState); // Set initial relay state
     digitalWrite(ledPin, currentRelayState);   // Set initial LED state
-
-    // Connect to WiFi
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    while (WiFi.status() != WL_CONNECTED)
-    {
-        delay(500);
-        Serial.print(".");
-    }
-    Serial.println("");
-    Serial.println("WiFi connected.");
-    setupWebServer(); // Initialize web server setup
+    setupWiFi();                               // Initialize WiFi connection
+    setupWebServer();                          // Initialize web server setup
     server.begin();
     Serial.println("HTTP server started.");
     Serial.println(WiFi.localIP());
@@ -107,19 +100,12 @@ void loop()
     // Control the relay and LED based on the float switches status
     if (relayShouldBeActive && currentRelayState != HIGH)
     {
-        digitalWrite(relayPin, HIGH);
-        digitalWrite(ledPin, HIGH); // Turn on the LED
-        currentRelayState = HIGH;
-        Serial.println("Relay and LED activated.");
+        activateRelayAndLED();
     }
     else if (!relayShouldBeActive && currentRelayState != LOW)
     {
-        digitalWrite(relayPin, LOW);
-        digitalWrite(ledPin, LOW); // Turn off the LED
-        currentRelayState = LOW;
-        Serial.println("Relay and LED deactivated.");
+        deactivateRelayAndLED();
     }
 
     delay(50); // Wait for a second before reading again
-    // server.handleClient(); // Handle client requests
 }

@@ -50,13 +50,21 @@ void handleOverrideToggle()
 
 void handleRoot()
 {
-    String html = "<html><head><title>Float Switch Status</title></head><body><h1>Float Switch Status</h1>";
+    String html = "<html><head><title>Float Switch Status</title>";
+    html += "<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}";
+    html += ".button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;";
+    html += "text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}";
+    html += ".button2 {background-color: #555555;}</style></head>";
+    html += "<body><h1>Float Switch Status</h1>";
     html += "<form action='/override' method='get'><button>Toggle Override Mode</button></form><br>";
     html += overrideMode ? "<b>Override Mode is ON</b><br>" : "<b>Override Mode is OFF</b><br>";
     for (int i = 0; i < numSwitches; ++i)
     {
         html += "Switch " + String(i + 1) + ": " + (lastSwitchStates[i] ? "CLOSED" : "OPEN");
-        html += " <form action='/toggle' method='get'><button name='switch' value='" + String(i) + "'>Toggle</button></form><br>";
+        // Check if the switch is CLOSED to determine button class
+        String buttonClass = lastSwitchStates[i] ? "button" : "button button2";
+        html += (lastSwitchStates[i] ? "CLOSED" : "OPEN");
+        html += " <form action='/toggle' method='get'><button type='submit' name='switch' value='" + String(i) + "' class='" + buttonClass + "'>Toggle</button></form><br>";
     }
     html += "</body></html>";
     server.send(200, "text/html", html);

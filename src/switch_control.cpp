@@ -31,27 +31,40 @@ void sendDiscordWebhook(String message)
     http.end();
 }
 
+// New array to store the timestamp of the last OPEN to CLOSED transition for each switch
+unsigned long lastCloseTimestamps[MAX_SWITCHES] = {0};
+
 void updateSwitchStates(bool &relayShouldBeActive, int &openSwitches, bool &stateChanged)
 {
+    unsigned long currentTimestamp = millis();  // Get the current timestamp
+    const unsigned long debouncePeriod = 10000; // 10 seconds cooldown period for OPEN to CLOSED transition
+
     if (!overrideMode)
     {
         for (int i = 0; i < MAX_SWITCHES; ++i)
         {
             bool currentState = digitalRead(floatSwitchPins[i]) == LOW; // Read current state (CLOSED if LOW)
 
-            // Check for transition from CLOSED (true) to OPEN (false)
-            if (lastSwitchStates[i] && !currentState)
+            // If switch goes from OPEN to CLOSED, apply debounce
+            if (!lastSwitchStates[i] && currentState)
             {
-                tripCounters[i]++;   // Increment trip counter for this switch
-                stateChanged = true; // Mark that a change has occurred
-                sendDiscordWebhook("Float switch " + String(i) + " has been tripped! Tripped " + String(tripCounters[i]) + " time(s)!");
+                if (currentTimestamp - lastCloseTimestamps[i] > debouncePeriod)
+                {
+                    // Accept the CLOSED state after debounce period
+                    lastSwitchStates[i] = currentState;
+                    lastCloseTimestamps[i] = currentTimestamp; // Update last CLOSED timestamp
+                    // No need to send webhook or increment counter here
+                }
             }
-
-            // Update the last state and manage relay and open switches count
-            if (currentState != lastSwitchStates[i])
+            // Immediate response for CLOSED to OPEN transition
+            else if (lastSwitchStates[i] && !currentState)
             {
                 lastSwitchStates[i] = currentState; // Update the last state
+                tripCounters[i]++;                  // Increment trip counter
+                stateChanged = true;
+                // sendDiscordWebhook("Float switch " + String(i) + " has been tripped! Tripped " + String(tripCounters[i]) + " time(s)!");
             }
+
             if (!currentState) // If current state is OPEN (LOW, true)
             {
                 relayShouldBeActive = false;

@@ -1,3 +1,9 @@
+/**
+ * Switch Control
+ * Description: This file contains the switch control
+ * Author: Tyler Woods
+ * Date: 1/16/2024
+ */
 #include "switch_control.h"
 #include "globals.h"
 
@@ -5,16 +11,23 @@ void updateSwitchStates(bool &relayShouldBeActive, int &openSwitches, bool &stat
 {
     if (!overrideMode)
     {
-        // Read and check the state of each float switch
-        for (int i = 0; i < numSwitches; ++i)
+        for (int i = 0; i < MAX_SWITCHES; ++i)
         {
-            bool isClosed = digitalRead(floatSwitchPins[i]) == LOW;
-            if (isClosed != lastSwitchStates[i])
+            bool currentState = digitalRead(floatSwitchPins[i]) == LOW; // Read current state (CLOSED if LOW)
+
+            // Check for transition from CLOSED (true) to OPEN (false)
+            if (lastSwitchStates[i] && !currentState)
             {
-                stateChanged = true;            // Mark that a change has occurred
-                lastSwitchStates[i] = isClosed; // Update the last state
+                tripCounters[i]++;   // Increment trip counter for this switch
+                stateChanged = true; // Mark that a change has occurred
             }
-            if (!isClosed)
+
+            // Update the last state and manage relay and open switches count
+            if (currentState != lastSwitchStates[i])
+            {
+                lastSwitchStates[i] = currentState; // Update the last state
+            }
+            if (!currentState) // If current state is OPEN (LOW, true)
             {
                 relayShouldBeActive = false;
                 openSwitches++;
@@ -23,10 +36,10 @@ void updateSwitchStates(bool &relayShouldBeActive, int &openSwitches, bool &stat
     }
     else
     {
-        // In override mode, count the number of open switches based on lastSwitchStates array
-        for (int i = 0; i < numSwitches; ++i)
+        // In override mode, logic remains the same
+        for (int i = 0; i < MAX_SWITCHES; ++i)
         {
-            if (!lastSwitchStates[i])
+            if (!lastSwitchStates[i]) // If the switch is OPEN (HIGH, false)
             {
                 relayShouldBeActive = false;
                 openSwitches++;

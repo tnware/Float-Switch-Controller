@@ -93,6 +93,8 @@ const char *webpage = R"=====(
           </div>
         </div>
 
+        <div id="tripCounts"><!-- Switches will be loaded here --></div>
+
         <div id="switches"><!-- Switches will be loaded here --></div>
         <form action="/override" method="get" class="mt-4">
           <button
@@ -146,44 +148,49 @@ const char *webpage = R"=====(
           });
       }
 
-      function fetchSwitchData() {
-        fetch("/getSwitchData")
-          .then((response) => response.json())
-          .then((data) => {
-            let switchesHTML = "";
-            for (let i = 0; i < Object.keys(data).length; i++) {
-              let state = data[i];
-              let buttonClasses = "px-4 py-2 text-white font-bold rounded ";
-              let statusClass =
-                state === "CLOSED" ? "badge badge-okay" : "badge badge-alert";
+function fetchSwitchData() {
+  // Fetch both switch data and trip counts
+  Promise.all([
+    fetch("/getSwitchData").then(response => response.json()),
+    fetch("/getTripCounts").then(response => response.json())
+  ]).then(([switchData, tripCounts]) => {
+    let switchesHTML = "";
+    for (let i = 0; i < Object.keys(switchData).length; i++) {
+      let state = switchData[i];
+      let tripCount = tripCounts[i];
+      let buttonClasses = "px-4 py-2 text-white font-bold rounded ";
+      let statusClass =
+        state === "CLOSED" ? "badge badge-okay" : "badge badge-alert";
+      let tripCountBadgeClass = "badge " + (tripCount > 0 ? "badge-alert" : "badge-okay");
 
-              if (isOverrideActive) {
-                buttonClasses +=
-                  state === "CLOSED"
-                    ? "bg-green-500 hover:bg-green-600"
-                    : "bg-red-500 hover:bg-red-600";
-              } else {
-                buttonClasses +=
-                  "bg-gray-400 cursor-not-allowed hover:bg-gray-400"; // Gray color and disabled hover for inactive state
-              }
-
-              let disabledAttribute = isOverrideActive ? "" : "disabled";
-              switchesHTML += `
-            <div class="flex items-center justify-between mb-2 p-2 bg-gray-700 rounded shadow">
-                <div class="flex items-center">
-                    <span class="${statusClass}">${state}</span>
-                    <span class="ml-2">Switch ${i + 1}</span>
-                </div>
-                <form action='/toggle' method='get'>
-                    <button type='submit' name='switch' value='${i}' class='${buttonClasses}' ${disabledAttribute}>
-                        Toggle
-                    </button>
-                </form>
-            </div>`;
-            }
-            document.getElementById("switches").innerHTML = switchesHTML;
-          });
+      if (isOverrideActive) {
+        buttonClasses +=
+          state === "CLOSED"
+            ? "bg-green-500 hover:bg-green-600"
+            : "bg-red-500 hover:bg-red-600";
+      } else {
+        buttonClasses +=
+          "bg-gray-400 cursor-not-allowed hover:bg-gray-400";
       }
+
+      let disabledAttribute = isOverrideActive ? "" : "disabled";
+      switchesHTML += `
+        <div class="flex items-center justify-between mb-2 p-2 bg-gray-700 rounded shadow">
+          <div class="flex items-center">
+            <span class="${statusClass}">${state}</span>
+            <span class="ml-2">Switch ${i + 1}</span>
+          </div>
+          <span class="${tripCountBadgeClass} ml-2">Trips: ${tripCount}</span>
+          <form action='/toggle' method='get'>
+            <button type='submit' name='switch' value='${i}' class='${buttonClasses}' ${disabledAttribute}>
+              Toggle
+            </button>
+          </form>
+        </div>`;
+    }
+    document.getElementById("switches").innerHTML = switchesHTML;
+  });
+}
 
       fetchSwitchData();
       setInterval(fetchSwitchData, 5000); // Update every 5 seconds

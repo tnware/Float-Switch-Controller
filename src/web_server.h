@@ -24,6 +24,18 @@ String getSwitchDataJSON()
     return output;
 }
 
+String getTripCountsJSON()
+{
+    DynamicJsonDocument doc(MAX_SWITCHES * 20); // Adjust size as needed
+    for (int i = 0; i < numSwitches; ++i)
+    {
+        doc[String(i)] = tripCounters[i];
+    }
+    String output;
+    serializeJson(doc, output);
+    return output;
+}
+
 // Serializes the relay status into a JSON string
 String getRelayStatusJSON()
 {
@@ -121,5 +133,7 @@ void setupWebServer()
               {
         String response = getOverrideStatusJSON();
         request->send(200, "application/json", response); });
+    server.on("/getTripCounts", HTTP_GET, [](AsyncWebServerRequest *request)
+              { request->send(200, "application/json", getTripCountsJSON()); });
     // More routes...
 }

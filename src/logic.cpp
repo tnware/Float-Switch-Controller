@@ -1,3 +1,9 @@
+/**
+ * Logic
+ * Description: This file contains the relay logic
+ * Author: Tyler Woods
+ * Date: 1/16/2024
+ */
 #include "logic.h"
 #include "globals.h"
 

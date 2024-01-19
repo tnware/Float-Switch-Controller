@@ -36,7 +36,7 @@ const int ledPin = 2;         // GPIO pin used for the LED
 bool currentRelayState = LOW; // Current state of the relay
 
 bool overrideMode = false; // Global variable to track the override mode
-
+int tripCounters[MAX_SWITCHES] = {0};
 void setup()
 {
     Serial.begin(9600); // Initialize serial communication

@@ -6,6 +6,30 @@
  */
 #include "switch_control.h"
 #include "globals.h"
+#include <HTTPClient.h>
+
+void sendDiscordWebhook(String message)
+{
+    HTTPClient http;
+    http.begin("https://discord.com/api/webhooks/1197747033667280936/agBmTfDwUQT9TyekZA7zhi35g071mccgXZ8G8z_v0kpAupEW0VehS9PBvaMCOiMtrRfM"); // Paste your webhook URL here
+    http.addHeader("Content-Type", "application/json");
+
+    String discordMessage = "{\"content\": \"" + message + "\"}";
+    int httpResponseCode = http.POST(discordMessage);
+
+    if (httpResponseCode > 0)
+    {
+        Serial.print("HTTP Response code: ");
+        Serial.println(httpResponseCode);
+    }
+    else
+    {
+        Serial.print("Error code: ");
+        Serial.println(httpResponseCode);
+    }
+
+    http.end();
+}
 
 void updateSwitchStates(bool &relayShouldBeActive, int &openSwitches, bool &stateChanged)
 {
@@ -20,6 +44,7 @@ void updateSwitchStates(bool &relayShouldBeActive, int &openSwitches, bool &stat
             {
                 tripCounters[i]++;   // Increment trip counter for this switch
                 stateChanged = true; // Mark that a change has occurred
+                sendDiscordWebhook("Float switch " + String(i) + " has been tripped! Tripped " + String(tripCounters[i]) + " time(s)!");
             }
 
             // Update the last state and manage relay and open switches count

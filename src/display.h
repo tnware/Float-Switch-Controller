@@ -3,7 +3,7 @@
 
 extern U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2;
 
-void drawStatusScreen(bool allClosed, int openSwitchCount)
+void drawStatusScreen(bool allClosed, int openSwitchCount, bool isOverrideMode)
 {
     // Clear the buffer
     u8g2.clearBuffer();
@@ -30,7 +30,11 @@ void drawStatusScreen(bool allClosed, int openSwitchCount)
     u8g2.setFont(u8g2_font_ncenB08_tr); // Choose a suitable font
 
     // Display the system status as text
-    if (allClosed)
+    if (isOverrideMode)
+    {
+        u8g2.drawStr(0, baseY, "OVERRIDE MODE");
+    }
+    else if (allClosed)
     {
         u8g2.drawStr(0, baseY, "OKAY");
     }
@@ -40,7 +44,6 @@ void drawStatusScreen(bool allClosed, int openSwitchCount)
         sprintf(alertMsg, "ALERT: %d OPEN", openSwitchCount);
         u8g2.drawStr(0, baseY, alertMsg);
     }
-
     // Choose a suitable font for the icons
     u8g2.setFont(u8g2_font_unifont_t_77);
 

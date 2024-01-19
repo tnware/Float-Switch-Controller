@@ -63,19 +63,19 @@ void loop()
     // Update the OLED display if there is a change in state or if in override mode
     if (stateChanged || overrideMode)
     {
-        drawStatusScreen(relayShouldBeActive, openSwitches);
+        drawStatusScreen(relayShouldBeActive, openSwitches, overrideMode);
     }
 
     // Control relay and LED based on switch states
     if (relayShouldBeActive && currentRelayState != HIGH)
     {
         activateRelayAndLED();
-        drawStatusScreen(relayShouldBeActive, openSwitches);
+        drawStatusScreen(relayShouldBeActive, openSwitches, overrideMode);
     }
     else if (!relayShouldBeActive && currentRelayState != LOW)
     {
         deactivateRelayAndLED();
-        drawStatusScreen(relayShouldBeActive, openSwitches);
+        drawStatusScreen(relayShouldBeActive, openSwitches, overrideMode);
     }
 
     delay(50); // Short delay for debounce and rate control

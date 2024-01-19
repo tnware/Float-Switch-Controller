@@ -2,69 +2,74 @@
 
 ## Overview
 
-This project is designed to monitor the status of float switches connected to an ESP32 and display their status on an OLED display. It includes a web server that allows users to view the status and control the switches from a web interface.
+This project involves a system to monitor and control float switches using an ESP32. It displays the status of each switch on an SSD1306 OLED display and provides a web interface for remote monitoring and manual override. The system also includes a relay that is controlled based on the float switch states.
 
 ## Features
 
 - Monitors multiple float switches.
-- Displays the status on an SSD1306 OLED display.
-- Web server for remote monitoring and control.
-- Override mode to manually change the state of the switches.
-- Relay control based on the state of the float switches.
+- Real-time display of switch status on an SSD1306 OLED display.
+- Web interface for remote status monitoring and control.
+- Override mode for manual control of the switches.
+- Relay control based on float switch states.
+- Tracks the number of times each switch has been activated (tripped).
+- Relay status indication through an LED (optional).
 
 ## Hardware Requirements
 
 - ESP32 Development Board
-- SSD1306 OLED display
-- Float switches
-- Relay module
-- LEDs (optional for indicating relay status)
-- Breadboard and jumper wires
+- SSD1306 OLED Display
+- Multiple Float Switches
+- Relay Module
+- LEDs for Relay Status Indication (optional)
+- Breadboard and Jumper Wires
 
 ## Software Requirements
 
 - Arduino IDE
 - ESP32 Board Package for Arduino
-- U8g2lib library for OLED
-- WiFi library for ESP32
+- U8g2lib Library for OLED
+- WiFi Library for ESP32
+- ESPAsyncWebServer Library
 
 ## Setup Instructions
 
-1. Connect the hardware according to the schematics provided.
-2. Install the ESP32 Board Package in Arduino IDE.
-3. Install the `U8g2lib` library using the Library Manager in Arduino IDE.
-4. Update the `credentials.h` file with your WiFi SSID and password.
-5. Flash the ESP32 with the provided code.
+1. Assemble the hardware according to the provided schematic.
+2. Install the ESP32 Board Package in the Arduino IDE.
+3. Install the `U8g2lib` library via the Arduino IDE Library Manager.
+4. Flash the ESP32 with the provided code after updating the `credentials.h` file with your WiFi network details.
 
 ## Usage
 
-Once the ESP32 is powered and running:
+After powering up the ESP32:
 
-1. Connect to the ESP32 web server using its IP address.
-2. The web interface will display the status of each float switch.
-3. You can toggle the override mode and the state of each switch from the web interface.
+1. Access the web interface using the ESP32's IP address.
+2. Monitor the status of each float switch and the relay.
+3. Use the web interface to toggle individual switches or enable override mode.
+4. View the trip count for each switch, indicating how many times it has been activated.
 
 ## API Endpoints
 
-- `/` - GET request to view the status of the float switches.
-- `/toggle` - GET request with a switch parameter to toggle the state of a switch.
-- `/override` - GET request to toggle the override mode.
+- `/` - GET: Main page showing float switch status.
+- `/toggle?switch={id}` - GET: Toggle the state of a switch (id is the switch number).
+- `/override` - GET: Toggle override mode.
+- `/getSwitchData` - GET: Returns the current state of each switch.
+- `/getTripCounts` - GET: Returns the trip count for each switch.
+- `/getRelayStatus` - GET: Returns the current status of the relay.
+- `/getGlobalStatus` - GET: Returns the overall status based on float switches.
 
 ## OLED Display
 
-The OLED display shows the status of each float switch and the relay. It will update in real-time as switches are toggled or if the override mode changes.
+The OLED display presents the status of the float switches, relay state, and override mode, updating in real time.
 
 ## Troubleshooting
 
-Ensure that your WiFi credentials are correct and that the ESP32 is in range of your router. Check the wiring if the OLED is not displaying or if the relay is not switching correctly.
-
----
-
-For more information and support, please open an issue on the project repository or contact the maintainer.
+- Verify WiFi credentials and router proximity.
+- Check wiring if the OLED display or relay functionality is inconsistent.
+- Reset the ESP32 if the web interface is unresponsive.
 
 ## Contributing
 
-Contributions to this project are welcome. Please fork the repository and submit a pull request with your proposed changes.
+Contributions are welcome! Please fork the repository and submit a pull request with your changes for review.
 
 ## License
 

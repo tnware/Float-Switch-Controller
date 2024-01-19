@@ -31,6 +31,7 @@ void updateSwitchStates(bool &relayShouldBeActive, int &openSwitches, bool &stat
             {
                 relayShouldBeActive = false;
                 openSwitches++;
+                stateChanged = true;
             }
         }
     }

@@ -70,10 +70,12 @@ void loop()
     if (relayShouldBeActive && currentRelayState != HIGH)
     {
         activateRelayAndLED();
+        drawStatusScreen(relayShouldBeActive, openSwitches);
     }
     else if (!relayShouldBeActive && currentRelayState != LOW)
     {
         deactivateRelayAndLED();
+        drawStatusScreen(relayShouldBeActive, openSwitches);
     }
 
     delay(50); // Short delay for debounce and rate control
